@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bolledger — आपकी दुकान का मुनीम</title>
+<style>
+  :root { --bg:#0a0e14; --panel:#0d1117; --card:#161b22; --border:#2a3139; --text:#e6edf3; --dim:#8b949e;
+          --saffron:#f59e0b; --green:#22c55e; --red:#ef4444; --blue:#38bdf8; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans', 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--panel); }
+  header .logo { font-size: 22px; font-weight: 800; }
+  header .logo span { color: var(--saffron); }
+  header .tag { color: var(--dim); font-size: 13px; }
+  header .stt { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 20px; }
+  .stt.on { background: #14532d; color: #86efac; }
+  .stt.off { background: #450a0a; color: #fca5a5; }
+  main { flex: 1; display: grid; grid-template-columns: 300px 1fr 300px; gap: 0; overflow: hidden; }
+  .side { border-right: 1px solid var(--border); overflow-y: auto; padding: 14px; background: var(--panel); }
+  .side.right { border-right: none; border-left: 1px solid var(--border); }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 6px 0 10px; }
+  .cust { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .cust .nm { font-weight: 600; }
+  .cust .bal { font-weight: 700; }
+  .bal.pos { color: var(--red); } .bal.zero { color: var(--green); } .bal.neg { color: var(--blue); }
+  .center { display: flex; flex-direction: column; overflow: hidden; }
+  #stream { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px; line-height: 1.45; font-size: 15px; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: #1d4ed8; border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg .meta { font-size: 11px; color: var(--dim); margin-top: 5px; }
+  .msg .txbadge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-right: 6px; }
+  .tx-udhaar_diya { background: #7f1d1d; color: #fecaca; } .tx-jama { background: #14532d; color: #bbf7d0; }
+  .tx-bikri { background: #78350f; color: #fde68a; } .tx-kharcha { background: #1e3a8a; color: #bfdbfe; }
+  .undo { font-size: 11px; color: var(--dim); cursor: pointer; text-decoration: underline; margin-left: 6px; }
+  .composer { border-top: 1px solid var(--border); padding: 14px 18px; display: flex; gap: 10px; align-items: center; background: var(--panel); }
+  #mic { width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--saffron); color: #111; font-size: 24px; cursor: pointer; flex-shrink: 0; transition: transform .15s; }
+  #mic.rec { background: var(--red); color: #fff; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  #text { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 15px; outline: none; }
+  #text:focus { border-color: var(--saffron); }
+  #send { background: var(--saffron); border: none; color: #111; font-weight: 700; padding: 14px 22px; border-radius: 12px; cursor: pointer; font-size: 15px; }
+  .hisaab-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .hisaab-card .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .hisaab-card .row b { font-weight: 700; }
+  .hint { color: var(--dim); font-size: 12px; line-height: 1.7; }
+  .hint code { background: var(--card); padding: 1px 6px; border-radius: 5px; color: var(--saffron); }
+  a.csv { color: var(--blue); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">bol<span>ledger</span></div>
+  <div class="tag">आपकी दुकान का मुनीम · offline voice hisaab</div>
+  <div id="stt" class="stt off">voice: …</div>
+</header>
+<main>
+  <div class="side">
+    <h3>ग्राहक / Customers</h3>
+    <div id="customers"></div>
+  </div>
+  <div class="center">
+    <div id="stream">
+      <div class="msg bot">नमस्ते! बोलिए या लिखिए:<br><code>रमेश को 500 उधार दिया</code> · <code>सुरेश ने 200 जमा किया</code> · <code>आज 1200 की बिक्री</code> · <code>बिजली बिल 800</code> · <code>आज का हिसाब</code></div>
+    </div>
+    <div class="composer">
+      <button id="mic" title="बोलिए">🎙</button>
+      <input id="text" placeholder="बोलिए या लिखिए… (Hindi / Hinglish)">
+      <button id="send">भेजें</button>
+    </div>
+  </div>
+  <div class="side right">
+    <h3>आज का हिसाब</h3>
+    <div id="hisaab"></div>
+    <a class="csv" href="/api/export.csv">⬇ CSV export</a>
+    <h3 style="margin-top:16px">उदाहरण</h3>
+    <div class="hint">
+      <code>रमेश को पांच सौ उधार दिया</code><br>
+      <code>सुरेश ने 200 जमा किया</code><br>
+      <code>आज 1200 की बिक्री</code><br>
+      <code>बिजली का बिल 800</code><br>
+      <code>रमेश का कितना बाकी है</code><br>
+      <code>आज का हिसाब दिखा</code>
+    </div>
+  </div>
+</main>
+<script>
+const stream = document.getElementById('stream');
+const KIND_HI = { udhaar_diya: 'उधार', jama: 'जमा', bikri: 'बिक्री', kharcha: 'खर्चा' };
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function bubble(text, cls, meta = '') {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.innerHTML = esc(text) + (meta ? `<div class="meta">${meta}</div>` : '');
+  stream.appendChild(d);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function renderState(s) {
+  document.getElementById('stt').className = 'stt ' + (s.stt_available ? 'on' : 'off');
+  document.getElementById('stt').textContent = s.stt_available ? 'voice: तैयार' : 'voice: सिर्फ text (STT नहीं है)';
+  const cust = document.getElementById('customers');
+  cust.innerHTML = s.customers.length ? '' : '<div class="hint">अभी कोई ग्राहक नहीं। पहली उधार entry बनाएँ।</div>';
+  for (const c of s.customers) {
+    const cls = c.balance > 0 ? 'pos' : (c.balance < 0 ? 'neg' : 'zero');
+    cust.innerHTML += `<div class="cust"><span class="nm">${esc(c.name)}</span><span class="bal ${cls}">₹${c.balance.toFixed(0)}</span></div>`;
+  }
+  const h = s.hisaab;
+  document.getElementById('hisaab').innerHTML = `<div class="hisaab-card">
+    <div class="row"><span>बिक्री (${h.bikri_count})</span><b style="color:var(--saffron)">₹${h.bikri.toFixed(0)}</b></div>
+    <div class="row"><span>जमा (${h.jama_count})</span><b style="color:var(--green)">₹${h.jama.toFixed(0)}</b></div>
+    <div class="row"><span>नया उधार (${h.udhaar_count})</span><b style="color:var(--red)">₹${h.udhaar_diya.toFixed(0)}</b></div>
+    <div class="row"><span>खर्चा (${h.kharcha_count})</span><b style="color:var(--blue)">₹${h.kharcha.toFixed(0)}</b></div>
+    <div class="row" style="border-top:1px solid var(--border);margin-top:6px;padding-top:8px"><span>कुल उधार बाकी</span><b>₹${h.total_outstanding.toFixed(0)}</b></div>
+  </div>`;
+}
+
+async function sendText(text) {
+  if (!text.trim()) return;
+  bubble(text, 'user');
+  const r = await fetch('/api/entry', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) }).then(r => r.json());
+  if (r.error) { bubble(r.error, 'bot'); return; }
+  const p = r.parse;
+  let meta = `${p.intent} · ${(p.confidence * 100).toFixed(0)}%`;
+  if (r.action) meta = `<span class="txbadge tx-${r.action.kind}">${KIND_HI[r.action.kind] || r.action.kind} ₹${r.action.amount.toFixed(0)}</span>` + meta + ` <span class="undo" onclick="undo(${r.action.id})">undo</span>`;
+  bubble(r.reply, 'bot', meta);
+  if (r.state) renderState(r.state);
+}
+
+async function undo(id) {
+  const r = await fetch('/api/undo/' + id, { method: 'POST' }).then(r => r.json());
+  if (r.ok) { bubble('आखिरी entry हटा दी गई।', 'bot'); renderState(r.state); }
+}
+
+document.getElementById('send').onclick = () => { const i = document.getElementById('text'); sendText(i.value); i.value = ''; };
+document.getElementById('text').addEventListener('keydown', e => { if (e.key === 'Enter') { sendText(e.target.value); e.target.value = ''; } });
+
+// ---- voice ----
+let rec = null, chunks = [];
+const mic = document.getElementById('mic');
+mic.onclick = async () => {
+  if (rec && rec.state === 'recording') { rec.stop(); return; }
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    rec = new MediaRecorder(s);
+    rec.ondataavailable = e => chunks.push(e.data);
+    rec.onstop = async () => {
+      mic.classList.remove('rec'); mic.textContent = '🎙';
+      s.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      bubble('🎙 …', 'user');
+      const fd = new FormData();
+      fd.append('file', blob, 'voice.wav');
+      const r = await fetch('/api/voice', { method: 'POST', body: fd }).then(r => r.json());
+      stream.lastChild.textContent = r.transcript ? '🎙 ' + r.transcript : '🎙 (समझ नहीं आया)';
+      if (r.error) { bubble(r.error, 'bot'); return; }
+      const p = r.parse;
+      let meta = `${p.intent} · ${(p.confidence * 100).toFixed(0)}%`;
+      if (r.action) meta = `<span class="txbadge tx-${r.action.kind}">${KIND_HI[r.action.kind]} ₹${r.action.amount.toFixed(0)}</span>` + meta + ` <span class="undo" onclick="undo(${r.action.id})">undo</span>`;
+      bubble(r.reply, 'bot', meta);
+      if (r.state) renderState(r.state);
+    };
+    rec.start();
+    mic.classList.add('rec'); mic.textContent = '⏹';
+  } catch (e) { bubble('माइक नहीं मिला: ' + e.message, 'bot'); }
+};
+
+fetch('/api/state').then(r => r.json()).then(renderState);
+</script>
+</body>
+</html>

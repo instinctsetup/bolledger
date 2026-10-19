@@ -1,0 +1,14 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (core only - no heavy voice deps in CI)
+        run: pip install fastapi "uvicorn[standard]" python-multipart pytest httpx
+      - name: Tests
+        run: python -m pytest tests/ -q

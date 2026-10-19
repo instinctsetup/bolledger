@@ -14,7 +14,9 @@ UNITS = {
     "tees": 30, "chalis": 40, "pachaas": 50, "saath": 60, "sattar": 70,
     "assi": 80, "assii": 80, "navve": 90, "nabbe": 90,
 }
-SPECIAL = {"dedh": 150, "dhai": 250, "sava": 125, "adha": 50, "paune": 75}
+# "dedh/dhai/sava" = 1.5/2.5/1.25 of the FOLLOWING multiplier (dedh sau=150, dhai hazaar=2500);
+# standalone they imply sau. adha/paune = 0.5/0.75 similarly.
+SPECIAL_FACTOR = {"dedh": 1.5, "dhai": 2.5, "sava": 1.25, "adha": 0.5, "paune": 0.75}
 MULTIPLIERS = {"sau": 100, "so": 100, "hazaar": 1000, "hazar": 1000,
                "hajjar": 1000, "lakh": 100000, "laakh": 100000, "crore": 10000000}
 
@@ -29,12 +31,26 @@ def parse_amount(text: str) -> tuple[float | None, str]:
     words = _TOKEN.findall(text.lower())
     segments, current, used = [], 0.0, []
     after_mult = False
-    for w in words:
-        if w in UNITS or w in SPECIAL:
+    i = 0
+    while i < len(words):
+        w = words[i]
+        if w in SPECIAL_FACTOR:
+            if after_mult and current:
+                segments.append(current)
+                current = 0.0
+            nxt = words[i + 1] if i + 1 < len(words) else None
+            mult = MULTIPLIERS.get(nxt, 100)
+            current += SPECIAL_FACTOR[w] * mult
+            used.append(w)
+            if nxt in MULTIPLIERS:
+                used.append(nxt)
+                i += 1
+            after_mult = mult >= 1000
+        elif w in UNITS:
             if after_mult and current:
                 segments.append(current)   # "do hazaar" done, "paanch sau" starts fresh
                 current = 0.0
-            current += UNITS.get(w, SPECIAL.get(w, 0)); used.append(w)
+            current += UNITS[w]; used.append(w)
             after_mult = False
         elif w in MULTIPLIERS:
             mult = MULTIPLIERS[w]
@@ -47,6 +63,7 @@ def parse_amount(text: str) -> tuple[float | None, str]:
         else:
             if used:
                 break
+        i += 1
     if current or segments:
         return float(sum(segments) + current), " ".join(used)
     return None, ""
