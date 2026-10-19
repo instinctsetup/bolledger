@@ -34,6 +34,8 @@ UDHAAR_T = [
     "udhaar diya {name} ko {amt}", "{name} ne {amt} udhaar liya",
     "{name} ko {amt} dena hai udhaar", "{name} ka {amt} udhaar likho",
     "{name} ko {amt} udhaar de diya aaj", "likh lo {name} ko {amt} udhaar",
+    # Whisper-STT error variants seen on synthetic TTS audio (documented in MATH.md):
+    "{name} ko {amt} daar diya", "{name} ko {amt} daar diya aaj", "{amt} daar {name} ko",
 ]
 JAMA_T = [
     "{name} {amt} wapas de gaya", "{name} se {amt} mil gaye",
@@ -53,6 +55,9 @@ BIKRI_T = [
     "bikri hui {amt} ki", "{amt} ki sale aaj", "{item} ka packet {amt} mein gaya",
     "aaj {amt} ka saamaan gaya", "{amt} rupaye ki bikri hui",
     "{item} {amt} mein becha", "sale {amt} aaj subah",
+    # Devanagari-transliteration variants:
+    "aaj {amt} kee bikree huee", "{amt} kee bikree huee aaj", "bikree huee {amt} kee",
+    "aaj {amt} kee sale huee", "{amt} kaa samaan bechaa",
 ]
 KHARCHA_T = [
     "bijli bill {amt} bhara", "aaj transport pe {amt} ud gaya",
@@ -63,6 +68,9 @@ KHARCHA_T = [
     "kharcha {amt} dukan ka", "{amt} samaan laane mein kharch",
     "transport ka {amt} gaya", "{amt} bill bhara", "dukaan ka kharcha {amt}",
     "{amt} maintenance mein laga", "aaj kharcha hua {amt}",
+    # Devanagari-transliteration variants (see bolledger/transliterate.py):
+    "bijalee ka bil {amt}", "bijalee bil {amt} bharaa", "bil {amt} kaa aayaa",
+    "aaj {amt} kaa kharcha ho gayaa", "rent {amt} diyaa", "kharcha {amt} dukaan kaa",
 ]
 BALANCE_T = [
     "{name} ka total kitna hua ab tak", "{name} pe kitna udhaar chal raha hai",
@@ -70,6 +78,8 @@ BALANCE_T = [
     "{name} ka kitna baaki hai", "{name} ka balance batao", "{name} pe kitna udhaar hai",
     "kitna dena hai {name} ko", "{name} ka hisaab batao", "{name} ka kitna paisa baaki",
     "balance kya hai {name} ka", "{name} ka udhaar kitna hai",
+    "{name} kaa balance bataao", "{name} kaa kitna baaki hai", "balance bataao {name} kaa",
+    "{name} kaa bailens bataao", "bailens bataao {name} kaa", "{name} kaa kitnaa baaki hai",
 ]
 HISAAB_T = [
     "aaj ka hisaab dikha", "aaj ka report", "kitna hua aaj", "aaj ka total batao",

@@ -28,6 +28,11 @@ def available() -> bool:
 def transcribe(wav_path: str, language: str = "hi") -> dict:
     """Transcribe a WAV file. Returns {text, language, duration_s}."""
     model = load_model()
-    segments, info = model.transcribe(wav_path, language=language, vad_filter=True)
+    # Devanagari-biased prompt: without it the base model sometimes emits
+    # Arabic-script Urdu for Hindi speech, which the NLU cannot read.
+    segments, info = model.transcribe(
+        wav_path, language=language, vad_filter=True,
+        initial_prompt="रमेश को पांच सौ रुपये उधार दिया। आज का हिसाब दिखाओ।",
+    )
     text = " ".join(s.text.strip() for s in segments).strip()
     return {"text": text, "language": info.language, "duration_s": round(info.duration, 2)}

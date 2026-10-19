@@ -1,6 +1,7 @@
 """Glue: NLU parse -> ledger action -> Hinglish reply."""
 from .nlu import HinglishNLU
 from .ledger import Ledger
+from .transliterate import has_devanagari, to_roman
 
 RESP = {
     "udhaar_diya": "{name} ka ₹{amt:.0f} udhaar likh diya. Ab total udhaar ₹{bal:.0f}.",
@@ -12,7 +13,10 @@ RESP = {
 
 def handle_text(text: str, nlu: HinglishNLU, ledger: Ledger) -> dict:
     """Parse one utterance and apply it. Returns {parse, reply, action?, hisaab?}."""
-    p = nlu.parse(text)
+    roman = to_roman(text) if has_devanagari(text) else text
+    p = nlu.parse(roman)
+    if roman != text:
+        p["roman"] = roman
     intent, amt, name = p["intent"], p["amount"], p["name"]
 
     if intent in ("udhaar_diya", "jama"):
