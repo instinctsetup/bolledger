@@ -7,8 +7,8 @@ and closes the day with a one-line hisaab.
 
 No paid API keys. No cloud dependency. Everything below runs locally on CPU.
 
-- **Demo video**: _link goes here_
-- **Project report (PDF)**: _link goes here_
+- **Demo video**: https://drive.google.com/file/d/1XLysEDrtbzCxFv3BW_zwiYDuhaAOzH9g/view
+- **Project report (PDF)**: https://drive.google.com/file/d/1SXhtNETpdFWCUg-5gODHl2b9dqJ8RX_p/view
 - Repo: https://github.com/instinctsetup/bolledger
 
 ## What it does
