@@ -100,15 +100,29 @@ _KNOWN_NAMES = {"ramesh", "suresh", "mahesh", "dinesh", "raju", "karan", "imran"
                 "vijay", "ajay", "sunita", "geeta", "rekha", "farhan", "mohan"}
 
 
+def _collapse_doubles(w: str) -> str:
+    """'raamesh' -> 'ramesh'; used only for name matching, not features."""
+    out = []
+    for c in w:
+        if not out or out[-1] != c:
+            out.append(c)
+    return "".join(out)
+
+
 def extract_name(text: str) -> str | None:
-    """Customer name: known name, or the word right before ko/ne/ka/se."""
+    """Customer name: known name, or the word right before ko/ne/ka/kaa/se.
+
+    Transliterated Devanagari produces double vowels ('raamesh') and long
+    particles ('kaa'), so matching collapses doubled letters.
+    """
     toks = tokenize(text)
+    collapsed = {_collapse_doubles(t) for t in _KNOWN_NAMES}
     for t in toks:
-        if t in _KNOWN_NAMES:
-            return t.capitalize()
+        if _collapse_doubles(t) in collapsed:
+            return _collapse_doubles(t).capitalize()
     for i, t in enumerate(toks[:-1]):
-        if toks[i + 1] in ("ko", "ne", "ka", "se") and t not in STOP and not t.isdigit():
-            return t.capitalize()
+        if toks[i + 1] in ("ko", "ne", "ka", "kaa", "se") and t not in STOP and not t.isdigit():
+            return _collapse_doubles(t).capitalize()
     return None
 
 
