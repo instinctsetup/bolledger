@@ -20,7 +20,7 @@ def handle_text(text: str, nlu: HinglishNLU, ledger: Ledger) -> dict:
     intent, amt, name = p["intent"], p["amount"], p["name"]
 
     if intent in ("udhaar_diya", "jama"):
-        if amt is None:
+        if amt is None or amt <= 0:
             return {"parse": p, "reply": "Kitne rupaye? Amount samajh nahi aaya - dobara boliye."}
         if not name:
             return {"parse": p, "reply": "Kiske naam? Grahak ka naam boliye."}
@@ -29,7 +29,7 @@ def handle_text(text: str, nlu: HinglishNLU, ledger: Ledger) -> dict:
         return {"parse": p, "reply": RESP[intent].format(name=name, amt=amt, bal=bal), "action": tx}
 
     if intent in ("bikri", "kharcha"):
-        if amt is None:
+        if amt is None or amt <= 0:
             return {"parse": p, "reply": "Kitne ki? Amount dobara boliye."}
         note = p["item"] or ""
         tx = ledger.add(intent, amt, None, note=note, raw_text=text, confidence=p["confidence"])

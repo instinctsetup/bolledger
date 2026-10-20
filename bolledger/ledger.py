@@ -3,6 +3,7 @@
 Money is stored as integer paise (1 rupee = 100 paise) - no float drift.
 """
 import sqlite3
+import threading
 import time
 from pathlib import Path
 
@@ -43,18 +44,26 @@ class Ledger:
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
         self.db.commit()
+        self._lock = threading.RLock()  # reentrant: add() holds it while calling get_or_create_customer()
 
     def close(self):
         self.db.close()
 
     # ---- customers ---------------------------------------------------------
     def get_or_create_customer(self, name: str) -> int:
-        row = self.db.execute("SELECT id FROM customers WHERE name=?", (name,)).fetchone()
-        if row:
-            return row["id"]
-        cur = self.db.execute("INSERT INTO customers(name, created_ts) VALUES (?,?)", (name, int(time.time())))
-        self.db.commit()
-        return int(cur.lastrowid)
+        with self._lock:
+            row = self.db.execute("SELECT id FROM customers WHERE name=?", (name,)).fetchone()
+            if row:
+                return row["id"]
+            try:
+                cur = self.db.execute(
+                    "INSERT INTO customers(name, created_ts) VALUES (?,?)", (name, int(time.time())))
+                self.db.commit()
+                return int(cur.lastrowid)
+            except sqlite3.IntegrityError:
+                self.db.rollback()
+                row = self.db.execute("SELECT id FROM customers WHERE name=?", (name,)).fetchone()
+                return row["id"]
 
     def list_customers(self) -> list[dict]:
         rows = self.db.execute("""
@@ -82,13 +91,14 @@ class Ledger:
             raise ValueError(f"bad kind {kind}")
         if amount_rupees <= 0:
             raise ValueError("amount must be positive")
-        cid = self.get_or_create_customer(name) if name else None
-        ts = int(time.time())
-        cur = self.db.execute(
-            "INSERT INTO transactions(ts, customer_id, kind, amount_paise, note, raw_text, confidence) VALUES (?,?,?,?,?,?,?)",
-            (ts, cid, kind, to_paise(amount_rupees), note, raw_text, confidence))
-        self.db.commit()
-        return {"id": int(cur.lastrowid), "ts": ts, "kind": kind, "amount": amount_rupees, "name": name}
+        with self._lock:
+            cid = self.get_or_create_customer(name) if name else None
+            ts = int(time.time())
+            cur = self.db.execute(
+                "INSERT INTO transactions(ts, customer_id, kind, amount_paise, note, raw_text, confidence) VALUES (?,?,?,?,?,?,?)",
+                (ts, cid, kind, to_paise(amount_rupees), note, raw_text, confidence))
+            self.db.commit()
+            return {"id": int(cur.lastrowid), "ts": ts, "kind": kind, "amount": amount_rupees, "name": name}
 
     def recent(self, limit: int = 30) -> list[dict]:
         rows = self.db.execute("""
@@ -98,9 +108,10 @@ class Ledger:
         return [self._row(r) for r in rows]
 
     def delete(self, tx_id: int) -> bool:
-        cur = self.db.execute("DELETE FROM transactions WHERE id=?", (tx_id,))
-        self.db.commit()
-        return cur.rowcount > 0
+        with self._lock:
+            cur = self.db.execute("DELETE FROM transactions WHERE id=?", (tx_id,))
+            self.db.commit()
+            return cur.rowcount > 0
 
     @staticmethod
     def _row(r: sqlite3.Row) -> dict:

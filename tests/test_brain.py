@@ -30,3 +30,10 @@ def test_unknown_graceful(tmp_path):
     nlu, led = _setup(tmp_path)
     r = handle_text("gaana bajao", nlu, led)
     assert "Samajh nahi aaya" in r["reply"]
+
+
+def test_zero_amount_asks_again(tmp_path):
+    nlu, led = _setup(tmp_path)
+    r = handle_text("ramesh ko 0 udhaar diya", nlu, led)
+    assert "action" not in r
+    assert "Kitne" in r["reply"]

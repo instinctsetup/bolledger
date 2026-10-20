@@ -44,3 +44,18 @@ def test_bad_inputs(led):
         led.add("udhaar_diya", -5, "A")
     with pytest.raises(ValueError):
         led.add("nonsense", 5)
+
+
+def test_concurrent_customer_creation_no_crash(led):
+    import threading
+    errors = []
+    def work():
+        try:
+            led.add("udhaar_diya", 10, "SameName")
+        except Exception as e:
+            errors.append(e)
+    threads = [threading.Thread(target=work) for _ in range(10)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert not errors
+    assert led.balance("SameName") == 100

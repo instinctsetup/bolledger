@@ -2,7 +2,10 @@
 
 Run:  uvicorn server:app --port 8100    then open http://localhost:8100
 """
+import csv
+import io
 import time
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile
@@ -39,7 +42,10 @@ def entry(payload: dict):
     text = (payload.get("text") or "").strip()
     if not text:
         return {"error": "empty"}
-    result = handle_text(text, NLU, LEDGER)
+    try:
+        result = handle_text(text, NLU, LEDGER)
+    except Exception as e:
+        return {"error": f"Kuch galat ho gaya: {e}"}
     result["state"] = state()
     return result
 
@@ -48,7 +54,7 @@ def entry(payload: dict):
 async def voice(file: UploadFile):
     if not stt.available():
         return {"error": "STT not installed (pip install faster-whisper)"}
-    tmp = Path("/tmp") / f"bolledger-voice-{int(time.time()*1000)}.wav"
+    tmp = Path("/tmp") / f"bolledger-voice-{uuid.uuid4().hex}.wav"
     tmp.write_bytes(await file.read())
     try:
         tr = stt.transcribe(str(tmp))
@@ -56,7 +62,10 @@ async def voice(file: UploadFile):
         tmp.unlink(missing_ok=True)
     if not tr["text"]:
         return {"error": "Kuch sunai nahi diya - dobara boliye.", "transcript": ""}
-    result = handle_text(tr["text"], NLU, LEDGER)
+    try:
+        result = handle_text(tr["text"], NLU, LEDGER)
+    except Exception as e:
+        return {"error": f"Kuch galat ho gaya: {e}", "transcript": tr["text"]}
     result["transcript"] = tr["text"]
     result["state"] = state()
     return result
@@ -70,10 +79,12 @@ def undo(tx_id: int):
 
 @app.get("/api/export.csv")
 def export_csv():
-    rows = ["id,ts,kind,name,amount,note,raw_text"]
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["id", "ts", "kind", "name", "amount", "note", "raw_text"])
     for t in LEDGER.recent(10000):
-        rows.append(f'{t["id"]},{t["ts"]},{t["kind"]},"{t["name"] or ""}",{t["amount"]},"{t["note"] or ""}","{t["raw_text"] or ""}"')
-    return PlainTextResponse("\n".join(rows), media_type="text/csv",
+        w.writerow([t["id"], t["ts"], t["kind"], t["name"] or "", t["amount"], t["note"] or "", t["raw_text"] or ""])
+    return PlainTextResponse(buf.getvalue(), media_type="text/csv",
                              headers={"content-disposition": "attachment; filename=bolledger.csv"})
 
 
